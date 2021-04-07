@@ -23,18 +23,19 @@ class CalendarPickerIntegration extends StatefulWidget {
 }
 
 class CalendarPickerIntegrationState extends State<CalendarPickerIntegration> {
-  CalendarController _calendarController;
-  DateRangePickerController _dateRangePickerController;
-  List<Appointment> _appointments;
-  List<DateTime> _appointmentDates;
-  List<DateTime> _appointmentDatesCollection;
+  final CalendarController _calendarController = CalendarController();
+  final DateRangePickerController _dateRangePickerController =
+      DateRangePickerController();
+  late _AppointmentDataSource _appointmentDataSource;
+  late List<DateTime> _specialDates;
 
   @override
   void initState() {
-    _calendarController = CalendarController();
-    _dateRangePickerController = DateRangePickerController();
-    _appointmentDates = <DateTime>[];
-    _appointmentDatesCollection=<DateTime>[];
+    _appointmentDataSource = _getCalendarDataSource();
+    _specialDates = <DateTime>[];
+    for (int i = 0; i < _appointmentDataSource.appointments!.length; i++) {
+      _specialDates.add(_appointmentDataSource.appointments![i].startTime);
+    }
     super.initState();
   }
 
@@ -55,7 +56,7 @@ class CalendarPickerIntegrationState extends State<CalendarPickerIntegration> {
                     controller: _dateRangePickerController,
                     monthViewSettings: DateRangePickerMonthViewSettings(
                       numberOfWeeksInView: 1,
-                      specialDates: _appointmentDatesCollection,
+                      specialDates: _specialDates,
                     ),
                     onSelectionChanged: selectionChanged,
                     monthCellStyle: DateRangePickerMonthCellStyle(
@@ -82,7 +83,7 @@ class CalendarPickerIntegrationState extends State<CalendarPickerIntegration> {
                     headerHeight: 0,
                     controller: _calendarController,
                     viewHeaderHeight: 0,
-                    dataSource: _getCalendarDataSource(),
+                    dataSource: _appointmentDataSource,
                     onViewChanged: viewChanged,
                   ),
                 ),
@@ -93,43 +94,34 @@ class CalendarPickerIntegrationState extends State<CalendarPickerIntegration> {
   }
 
   void selectionChanged(DateRangePickerSelectionChangedArgs args) {
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance!.addPostFrameCallback((timeStamp) {
       _calendarController.displayDate = args.value;
     });
   }
 
   _AppointmentDataSource _getCalendarDataSource() {
-    _appointments = <Appointment>[];
-
-    _appointments.add(Appointment(
+    final List<Appointment> appointments = <Appointment>[];
+    appointments.add(Appointment(
       startTime: DateTime.now().add(Duration(days: 2)),
       endTime: DateTime.now().add(Duration(days: 2, hours: 1)),
       subject: 'Planning',
       color: Colors.red,
     ));
-    _appointments.add(Appointment(
+    appointments.add(Appointment(
       startTime: DateTime.now().add(Duration(days: 3)),
       endTime: DateTime.now().add(Duration(days: 3, hours: 1)),
       subject: 'Meeting',
       color: Colors.blue,
     ));
-    return _AppointmentDataSource(_appointments);
+    return _AppointmentDataSource(appointments);
   }
 
   void viewChanged(ViewChangedDetails viewChangedDetails) {
-    DateTime _specialDate;
-    for (int i = 0; i <= viewChangedDetails.visibleDates.length; i++) {
-      _specialDate = _appointments[i].startTime;
-      _appointmentDates.add(_specialDate);
-    }
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance!.addPostFrameCallback((timeStamp) {
       _dateRangePickerController.selectedDate =
           viewChangedDetails.visibleDates[0];
       _dateRangePickerController.displayDate =
           viewChangedDetails.visibleDates[0];
-      setState(() {
-        _appointmentDatesCollection = _appointmentDates;
-      });
     });
   }
 }
@@ -137,17 +129,17 @@ class CalendarPickerIntegrationState extends State<CalendarPickerIntegration> {
 class _MonthCellDecoration extends Decoration {
   const _MonthCellDecoration(
       {this.borderColor,
-      this.backgroundColor,
-      this.showIndicator,
-      this.indicatorColor});
+      required this.backgroundColor,
+      required this.showIndicator,
+      required this.indicatorColor});
 
-  final Color borderColor;
+  final Color? borderColor;
   final Color backgroundColor;
   final bool showIndicator;
   final Color indicatorColor;
 
   @override
-  BoxPainter createBoxPainter([VoidCallback onChanged]) {
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) {
     return _MonthCellDecorationPainter(
         borderColor: borderColor,
         backgroundColor: backgroundColor,
@@ -159,18 +151,18 @@ class _MonthCellDecoration extends Decoration {
 class _MonthCellDecorationPainter extends BoxPainter {
   _MonthCellDecorationPainter(
       {this.borderColor,
-      this.backgroundColor,
-      this.showIndicator,
-      this.indicatorColor});
+      required this.backgroundColor,
+      required this.showIndicator,
+      required this.indicatorColor});
 
-  final Color borderColor;
+  final Color? borderColor;
   final Color backgroundColor;
   final bool showIndicator;
   final Color indicatorColor;
 
   @override
   void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
-    final Rect bounds = offset & configuration.size;
+    final Rect bounds = offset & configuration.size!;
     _drawDecoration(canvas, bounds);
   }
 
@@ -181,7 +173,7 @@ class _MonthCellDecorationPainter extends BoxPainter {
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 1;
     if (borderColor != null) {
-      paint.color = borderColor;
+      paint.color = borderColor!;
       canvas.drawRRect(
           RRect.fromRectAndRadius(bounds, const Radius.circular(5)), paint);
     }
